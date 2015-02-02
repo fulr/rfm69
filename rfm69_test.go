@@ -1,7 +1,6 @@
 package rfm69
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/kidoman/embd"
@@ -9,10 +8,9 @@ import (
 )
 
 func TestRfm69(t *testing.T) {
-	fmt.Print("Test")
-
+	t.Log("Test")
 	if err := embd.InitSPI(); err != nil {
-		panic(err)
+		t.Error(err)
 	}
 	defer embd.CloseSPI()
 
@@ -21,7 +19,7 @@ func TestRfm69(t *testing.T) {
 
 	rfm, err := NewDevice(spiBus, 1, 10, true)
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
-	print(rfm)
+	t.Log(rfm)
 }
