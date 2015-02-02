@@ -16,9 +16,11 @@ func main() {
 	}
 	defer embd.CloseSPI()
 
-	spiBus := embd.NewSPIBus(embd.SPIMode0, 0, 1000000, 8, 0)
+	spiBus := embd.NewSPIBus(embd.SPIMode0, 0, 4000000, 8, 0)
 	defer spiBus.Close()
 
-	rfm := rfm69.NewDevice(spiBus, 1, 10, true)
-
+	rfm, err := rfm69.NewDevice(spiBus, 1, 10, true)
+	if err != nil {
+		panic(err)
+	}
 }
