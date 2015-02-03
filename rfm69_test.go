@@ -14,10 +14,26 @@ func TestRfm69(t *testing.T) {
 	}
 	defer embd.CloseSPI()
 
+	if err := embd.InitGPIO(); err != nil {
+		panic(err)
+	}
+	defer embd.CloseGPIO()
+
+	gpio, err := embd.NewDigitalPin(10)
+	if err != nil {
+		panic(err)
+	}
+	defer gpio.Close()
+
+	if err := gpio.SetDirection(embd.In); err != nil {
+		panic(err)
+	}
+	gpio.ActiveLow(false)
+
 	spiBus := embd.NewSPIBus(embd.SPIMode0, 0, 4000000, 8, 0)
 	defer spiBus.Close()
 
-	rfm, err := NewDevice(spiBus, 1, 10, true)
+	rfm, err := NewDevice(spiBus, gpio, 1, 10, true)
 	if err != nil {
 		t.Error(err)
 	}
