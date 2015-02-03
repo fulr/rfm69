@@ -106,6 +106,7 @@ func (r *Device) setup() error {
 	//pinMode(_slaveSelectPin, OUTPUT)
 	//SPI.begin()
 
+	log.Println("start setup")
 	for data, err := r.readReg(REG_SYNCVALUE1); err == nil && data != 0xAA; data, err = r.readReg(REG_SYNCVALUE1) {
 		err := r.writeReg(REG_SYNCVALUE1, 0xAA)
 		if err != nil {
