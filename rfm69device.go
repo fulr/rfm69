@@ -2,46 +2,62 @@
 package rfm69
 
 import (
+	"log"
+
 	"github.com/kidoman/embd"
 )
 
 // Device RFM69 Device
 type Device struct {
 	SpiDevice  embd.SPIBus
-	Mode       byte
-	IsRFM69HW  bool
-	Network    byte
-	Address    byte
+	gpio       embd.DigitalPin
+	mode       byte
+	address    byte
+	network    byte
+	isRFM69HW  bool
 	powerLevel byte
 }
 
 // Global settings
 const (
-	CsmaLimit = -80
+	CsmaLimit  = -80
+	MaxDataLen = 66
 )
 
 // NewDevice creates a new device
-func NewDevice(spi embd.SPIBus, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
+func NewDevice(spi embd.SPIBus, gpio embd.DigitalPin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
 	ret := &Device{
 		SpiDevice: spi,
-		Network:   networkID,
-		Address:   nodeID,
-		IsRFM69HW: isRfm69HW,
+		gpio:      gpio,
+		network:   networkID,
+		address:   nodeID,
+		isRFM69HW: isRfm69HW,
 	}
 
+	log.Println("before setup")
 	err := ret.setup()
+	log.Println("after setup")
 
 	return ret, err
 }
 
 func (r *Device) writeReg(addr, data byte) error {
 	tx := []byte{addr | 0x80, data}
-	return r.SpiDevice.TransferAndRecieveData(tx)
+	log.Printf("write %x: %x", addr, data)
+	err := r.SpiDevice.TransferAndRecieveData(tx)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
 }
 
 func (r *Device) readReg(addr byte) (byte, error) {
 	tx := []byte{addr & 0x7f, 0}
+	log.Printf("read %x", addr)
 	err := r.SpiDevice.TransferAndRecieveData(tx)
+	if err != nil {
+		log.Println(err)
+	}
 	return tx[1], err
 }
 
@@ -76,7 +92,7 @@ func (r *Device) setup() error {
 		///* 0x2D */ { REG_PREAMBLELSB, RF_PREAMBLESIZE_LSB_VALUE } // default 3 preamble bytes 0xAAAAAA
 		/* 0x2E */ {REG_SYNCCONFIG, RF_SYNC_ON | RF_SYNC_FIFOFILL_AUTO | RF_SYNC_SIZE_2 | RF_SYNC_TOL_0},
 		/* 0x2F */ {REG_SYNCVALUE1, 0x2D}, // attempt to make this compatible with sync1 byte of RFM12B lib
-		/* 0x30 */ {REG_SYNCVALUE2, r.Network}, // NETWORK ID
+		/* 0x30 */ {REG_SYNCVALUE2, r.network}, // NETWORK ID
 		/* 0x37 */ {REG_PACKETCONFIG1, RF_PACKET1_FORMAT_VARIABLE | RF_PACKET1_DCFREE_OFF | RF_PACKET1_CRC_ON | RF_PACKET1_CRCAUTOCLEAR_ON | RF_PACKET1_ADRSFILTERING_OFF},
 		/* 0x38 */ {REG_PAYLOADLENGTH, 66}, // in variable length mode: the max frame size, not used in TX
 		///* 0x39 */ { REG_NODEADRS, nodeID }, // turned off because we're not using address filtering
@@ -113,13 +129,13 @@ func (r *Device) setup() error {
 
 	// Encryption is persistent between resets and can trip you up during debugging.
 	// Disable it during initialization so we always start from a known state.
-	err := r.encrypt([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+	err := r.encrypt([]byte{})
 	if err != nil {
 		return err
 	}
 
 	// called regardless if it's a RFM69W or RFM69HW
-	err = r.setHighPower(r.IsRFM69HW)
+	err = r.setHighPower(r.isRFM69HW)
 	if err != nil {
 		return err
 	}
@@ -128,6 +144,7 @@ func (r *Device) setup() error {
 	if err != nil {
 		return err
 	}
+	r.waitForMode()
 	//while((readReg(REG_IRQFLAGS1) & RF_IRQFLAGS1_MODEREADY) == 0x00) // wait for ModeReady
 	//attachInterrupt(_interruptNum, RFM69::isr0, RISING);
 
@@ -136,16 +153,36 @@ func (r *Device) setup() error {
 	return nil
 }
 
+func (r *Device) waitForMode() error {
+	for {
+		reg, err := r.readReg(REG_IRQFLAGS1)
+		if err != nil {
+			return err
+		}
+		if reg&RF_IRQFLAGS1_MODEREADY != 0 {
+			break
+		}
+	}
+	return nil
+}
+
 func (r *Device) encrypt(key []byte) error {
-	tx := make([]byte, 17)
-	tx[0] = REG_AESKEY1 | 0x80
-	copy(tx[1:], key)
-	return r.SpiDevice.TransferAndRecieveData(tx)
+	var turnOn byte
+	if len(key) == 16 {
+		turnOn = 1
+		tx := make([]byte, 17)
+		tx[0] = REG_AESKEY1 | 0x80
+		copy(tx[1:], key)
+		if err := r.SpiDevice.TransferAndRecieveData(tx); err != nil {
+			return err
+		}
+	}
+	return r.readWriteReg(REG_PACKETCONFIG2, 0xFE, turnOn)
 }
 
 // SetMode sets operation mode
 func (r *Device) SetMode(newMode byte) error {
-	if newMode == r.Mode {
+	if newMode == r.mode {
 		return nil
 	}
 
@@ -163,7 +200,7 @@ func (r *Device) SetMode(newMode byte) error {
 
 	// we are using packet mode, so this check is not really needed
 	// but waiting for mode ready is necessary when going from sleep because the FIFO may not be immediately available from previous mode
-	if r.Mode == RF_OPMODE_SLEEP {
+	if r.mode == RF_OPMODE_SLEEP {
 		for {
 			data, err := r.readReg(REG_IRQFLAGS1)
 			if err != nil {
@@ -175,15 +212,15 @@ func (r *Device) SetMode(newMode byte) error {
 		}
 	}
 
-	r.Mode = newMode
+	r.mode = newMode
 	return nil
 }
 
-func (r *Device) setHighPower(onOff bool) error {
-	r.IsRFM69HW = onOff
+func (r *Device) setHighPower(turnOn bool) error {
+	r.isRFM69HW = turnOn
 
 	ocp := byte(RF_OCP_ON)
-	if r.IsRFM69HW {
+	if r.isRFM69HW {
 		ocp = RF_OCP_OFF
 	}
 
@@ -192,7 +229,7 @@ func (r *Device) setHighPower(onOff bool) error {
 		return err
 	}
 
-	if r.IsRFM69HW { // turning ON
+	if r.isRFM69HW { // turning ON
 		// enable P1 & P2 amplifier stages
 		err = r.readWriteReg(REG_PALEVEL, 0x1F, RF_PALEVEL_PA1_ON|RF_PALEVEL_PA2_ON)
 	} else {
@@ -203,13 +240,13 @@ func (r *Device) setHighPower(onOff bool) error {
 	return err
 }
 
-func (r *Device) setHighPowerRegs(onOff bool) (err error) {
+func (r *Device) setHighPowerRegs(turnOn bool) (err error) {
 	var (
 		testPa1 byte = 0x55
 		testPa2 byte = 0x70
 	)
 
-	if onOff {
+	if turnOn {
 		testPa1 = 0x5D
 		testPa2 = 0x7C
 	}
@@ -223,13 +260,13 @@ func (r *Device) setHighPowerRegs(onOff bool) (err error) {
 
 // SetNetwork sets the network ID
 func (r *Device) SetNetwork(networkID byte) error {
-	r.Network = networkID
+	r.network = networkID
 	return r.writeReg(REG_SYNCVALUE2, networkID)
 }
 
 // SetAddress sets the node address
 func (r *Device) SetAddress(address byte) error {
-	r.Address = address
+	r.address = address
 	return r.writeReg(REG_NODEADRS, address)
 }
 
@@ -244,7 +281,7 @@ func (r *Device) SetPowerLevel(powerLevel byte) error {
 
 func (r *Device) canSend() (bool, error) {
 	// if signal stronger than -100dBm is detected assume channel activity
-	if r.Mode == RF_OPMODE_RECEIVER {
+	if r.mode == RF_OPMODE_RECEIVER {
 		rssi, err := r.readRSSI(false)
 		if err != nil {
 			return false, err
@@ -292,14 +329,26 @@ func (r *Device) readWriteReg(reg, andMask, orMask byte) error {
 	return r.writeReg(reg, regValue)
 }
 
-func (r *Device) send(toAddress byte, buffer []byte, requestACK bool) error {
-	// avoid RX deadlocks
-	err := r.readWriteReg(REG_PACKETCONFIG2, 0xFB, RF_PACKET2_RXRESTART)
-	if err != nil {
-		return err
+func (r *Device) writeFifo(toAddress byte, buffer []byte, requestACK, sendACK bool) error {
+	buffersize := len(buffer)
+	if buffersize > MaxDataLen {
+		buffersize = MaxDataLen
 	}
-	//uint32_t now = millis();
-	//while (!canSend() && millis() - now < RF69_CSMA_LIMIT_MS) receiveDone();
-	//sendFrame(toAddress, buffer, bufferSize, requestACK, false);
-	return nil
+	tx := make([]byte, buffersize+5)
+	// write to FIFO
+	tx[0] = REG_FIFO | 0x80
+	tx[1] = byte(buffersize + 3)
+	tx[2] = toAddress
+	tx[3] = r.address
+
+	if requestACK {
+		tx[4] = 0x40
+	}
+	if sendACK {
+		tx[4] = 0x80
+	}
+
+	copy(tx[5:], buffer[:buffersize])
+
+	return r.SpiDevice.TransferAndRecieveData(tx)
 }

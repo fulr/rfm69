@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/kidoman/embd"
-	_ "github.com/kidoman/embd/host/all"
+	_ "github.com/kidoman/embd/host/rpi"
 )
 
 func TestRfm69(t *testing.T) {
