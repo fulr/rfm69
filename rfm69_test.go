@@ -9,7 +9,7 @@ import (
 )
 
 func TestRfm69(t *testing.T) {
-	flag.Set("v", 23)
+	flag.Set("v", "23")
 
 	t.Log("Test")
 	if err := embd.InitSPI(); err != nil {
@@ -28,10 +28,10 @@ func TestRfm69(t *testing.T) {
 	}
 	defer gpio.Close()
 
-	if err := gpio.SetDirection(embd.In); err != nil {
-		panic(err)
-	}
-	gpio.ActiveLow(false)
+	//if err := gpio.SetDirection(embd.In); err != nil {
+	//	panic(err)
+	//}
+	//gpio.ActiveLow(false)
 
 	spiBus := embd.NewSPIBus(embd.SPIMode0, 0, 4000000, 8, 0)
 	defer spiBus.Close()
