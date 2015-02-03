@@ -1,6 +1,7 @@
 package rfm69
 
 import (
+	"flag"
 	"testing"
 
 	"github.com/kidoman/embd"
@@ -8,6 +9,8 @@ import (
 )
 
 func TestRfm69(t *testing.T) {
+	flag.Set("v", 23)
+
 	t.Log("Test")
 	if err := embd.InitSPI(); err != nil {
 		t.Error(err)
