@@ -4,7 +4,7 @@ package rfm69
 import (
 	"log"
 
-	"github.com/fulr/embd"
+	"github.com/kidoman/embd"
 )
 
 // Device RFM69 Device
