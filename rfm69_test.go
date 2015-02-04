@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/fulr/embd"
-	_ "github.com/fulr/embd/host/rpi"
+	_ "github.com/fulr/rfm69/rpi"
 )
 
 func TestRfm69(t *testing.T) {
