@@ -3,7 +3,8 @@ package rfm69
 import (
 	"testing"
 
-	"github.com/fulr/embd"
+	"github.com/kidoman/embd"
+
 	_ "github.com/fulr/rfm69/rpi"
 )
 
