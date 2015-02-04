@@ -42,7 +42,9 @@ func NewDevice(spi embd.SPIBus, gpio embd.DigitalPin, nodeID, networkID byte, is
 }
 
 func (r *Device) writeReg(addr, data byte) error {
-	tx := []byte{addr | 0x80, data}
+	tx := make([]uint8, 2)
+	tx[0] = addr | 0x80
+	tx[1] = data
 	log.Printf("write %x: %x", addr, data)
 	err := r.SpiDevice.TransferAndRecieveData(tx)
 	if err != nil {
@@ -52,7 +54,9 @@ func (r *Device) writeReg(addr, data byte) error {
 }
 
 func (r *Device) readReg(addr byte) (byte, error) {
-	tx := []byte{addr & 0x7f, 0}
+	tx := make([]uint8, 2)
+	tx[0] = addr & 0x7f
+	tx[1] = 0
 	log.Printf("read %x", addr)
 	err := r.SpiDevice.TransferAndRecieveData(tx)
 	if err != nil {
