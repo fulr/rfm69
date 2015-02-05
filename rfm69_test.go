@@ -26,7 +26,10 @@ func TestRfm69(t *testing.T) {
 	}
 	gpio.ActiveLow(false)
 
-	spiBus := NewSPIDevice()
+	spiBus, err := NewSPIDevice()
+	if err != nil {
+		panic(err)
+	}
 	defer spiBus.Close()
 
 	rfm, err := NewDevice(spiBus, gpio, 1, 10, true)
