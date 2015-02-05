@@ -12,9 +12,12 @@ package rfm69
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
 
+#define SPI_SPEED 4000000
+
 uint8_t mode=0;
 uint8_t bits=8;
 uint32_t speed=SPI_SPEED;
+uint16_t delay=5;
 
 int spi_open(const char *device) {
                 int fd = open(device, O_RDWR);
