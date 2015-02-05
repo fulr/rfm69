@@ -46,7 +46,7 @@ func (r *Device) writeReg(addr, data byte) error {
 	tx[0] = addr | 0x80
 	tx[1] = data
 	log.Printf("write %x: %x", addr, data)
-	rx, err := r.SpiDevice.Xfer(tx)
+	_, err := r.SpiDevice.Xfer(tx)
 	if err != nil {
 		log.Println(err)
 	}
@@ -178,7 +178,7 @@ func (r *Device) encrypt(key []byte) error {
 		tx := make([]byte, 17)
 		tx[0] = REG_AESKEY1 | 0x80
 		copy(tx[1:], key)
-		if rx, err := r.SpiDevice.Xfer(tx); err != nil {
+		if _, err := r.SpiDevice.Xfer(tx); err != nil {
 			return err
 		}
 	}
