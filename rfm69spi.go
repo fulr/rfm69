@@ -91,13 +91,22 @@ type SPIDevice struct {
 	fd int
 }
 
+// SPIError is the error
+type SPIError struct {
+	s string
+}
+
+func (e SPIError) Error() string {
+	return e.s
+}
+
 // NewSPIDevice creates a new device
 func NewSPIDevice() (*SPIDevice, error) {
 	name := C.CString("/dev/spidev0.0")
 	i := C.spi_open(name)
-	C.free(name)
+	C.free(unsafe.Pointer(name))
 	if i < 0 {
-		return nil, error("")
+		return nil, SPIError{"could not open"}
 	}
 	return &SPIDevice{i}, nil
 }
@@ -108,7 +117,7 @@ func (d *SPIDevice) Xfer(tx []byte) ([]byte, error) {
 	rx := make([]byte, length)
 	ret := C.spi_xfer(d.fd, unsafe.Pointer(&tx[0]), unsafe.Pointer(&rx[0]), length)
 	if ret < 0 {
-		return nil, error("could not xfer")
+		return nil, SPIError{"could not xfer"}
 	}
 	return rx, nil
 }
