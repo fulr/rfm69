@@ -107,7 +107,7 @@ func NewSPIDevice() (*SPIDevice, error) {
 func (d *SPIDevice) Xfer(tx []byte) ([]byte, error) {
 	length := len(tx)
 	rx := make([]byte, length)
-	ret := C.spi_xfer(d.fd, unsafe.Pointer(&tx[0]), unsafe.Pointer(&rx[0]), C.int(length))
+	ret := C.spi_xfer(d.fd, (*C.char)(unsafe.Pointer(&tx[0])), (*C.char)(unsafe.Pointer(&rx[0])), C.int(length))
 	if ret < 0 {
 		return nil, errors.New("could not xfer")
 	}
