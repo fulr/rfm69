@@ -85,28 +85,20 @@ int spi_xfer(int fd, char* tx, char* rx, int length) {
 */
 import "C"
 import "unsafe"
+import "errors"
 
 // SPIDevice device
 type SPIDevice struct {
-	fd int
-}
-
-// SPIError is the error
-type SPIError struct {
-	s string
-}
-
-func (e SPIError) Error() string {
-	return e.s
+	fd C.int
 }
 
 // NewSPIDevice creates a new device
 func NewSPIDevice() (*SPIDevice, error) {
 	name := C.CString("/dev/spidev0.0")
+	defer C.free(unsafe.Pointer(name))
 	i := C.spi_open(name)
-	C.free(unsafe.Pointer(name))
 	if i < 0 {
-		return nil, SPIError{"could not open"}
+		return nil, errors.New("could not open")
 	}
 	return &SPIDevice{i}, nil
 }
@@ -115,9 +107,9 @@ func NewSPIDevice() (*SPIDevice, error) {
 func (d *SPIDevice) Xfer(tx []byte) ([]byte, error) {
 	length := len(tx)
 	rx := make([]byte, length)
-	ret := C.spi_xfer(d.fd, unsafe.Pointer(&tx[0]), unsafe.Pointer(&rx[0]), length)
+	ret := C.spi_xfer(d.fd, unsafe.Pointer(&tx[0]), unsafe.Pointer(&rx[0]), C.int(length))
 	if ret < 0 {
-		return nil, SPIError{"could not xfer"}
+		return nil, errors.New("could not xfer")
 	}
 	return rx, nil
 }
