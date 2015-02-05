@@ -1,6 +1,7 @@
 package rfm69
 
 /*
+#include <linux/types.h>
 #include <linux/spi/spidev.h>
 
 uint8_t mode=0;
