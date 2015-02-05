@@ -9,7 +9,7 @@ import (
 
 // Device RFM69 Device
 type Device struct {
-	SpiDevice  embd.SPIBus
+	SpiDevice  *SPIDevice
 	gpio       embd.DigitalPin
 	mode       byte
 	address    byte
@@ -25,7 +25,7 @@ const (
 )
 
 // NewDevice creates a new device
-func NewDevice(spi embd.SPIBus, gpio embd.DigitalPin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
+func NewDevice(spi *SPIDevice, gpio embd.DigitalPin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
 	ret := &Device{
 		SpiDevice: spi,
 		gpio:      gpio,
@@ -42,11 +42,11 @@ func NewDevice(spi embd.SPIBus, gpio embd.DigitalPin, nodeID, networkID byte, is
 }
 
 func (r *Device) writeReg(addr, data byte) error {
-	tx := make([]uint8, 2)
+	tx := make([]byte, 2)
 	tx[0] = addr | 0x80
 	tx[1] = data
 	log.Printf("write %x: %x", addr, data)
-	err := r.SpiDevice.TransferAndRecieveData(tx)
+	rx, err := r.SpiDevice.Xfer(tx)
 	if err != nil {
 		log.Println(err)
 	}
@@ -58,7 +58,7 @@ func (r *Device) readReg(addr byte) (byte, error) {
 	tx[0] = addr & 0x7f
 	tx[1] = 0
 	log.Printf("read %x", addr)
-	err := r.SpiDevice.TransferAndRecieveData(tx)
+	err := r.SpiDevice.Xfer(tx)
 	if err != nil {
 		log.Println(err)
 	}
@@ -178,7 +178,7 @@ func (r *Device) encrypt(key []byte) error {
 		tx := make([]byte, 17)
 		tx[0] = REG_AESKEY1 | 0x80
 		copy(tx[1:], key)
-		if err := r.SpiDevice.TransferAndRecieveData(tx); err != nil {
+		if rx, err := r.SpiDevice.Xfer(tx); err != nil {
 			return err
 		}
 	}

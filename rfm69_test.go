@@ -5,33 +5,28 @@ import (
 
 	"github.com/kidoman/embd"
 
-	_ "github.com/fulr/rfm69/rpi"
+	_ "github.com/kidoman/embd/host/rpi"
 )
 
 func TestRfm69(t *testing.T) {
 	t.Log("Test")
-	if err := embd.InitSPI(); err != nil {
-		t.Error(err)
-	}
-	defer embd.CloseSPI()
-
 	if err := embd.InitGPIO(); err != nil {
 		panic(err)
 	}
 	defer embd.CloseGPIO()
 
-	gpio, err := embd.NewDigitalPin(10)
+	gpio, err := embd.NewDigitalPin(25)
 	if err != nil {
 		panic(err)
 	}
 	defer gpio.Close()
 
-	//if err := gpio.SetDirection(embd.In); err != nil {
-	//	panic(err)
-	//}
-	//gpio.ActiveLow(false)
+	if err := gpio.SetDirection(embd.In); err != nil {
+		panic(err)
+	}
+	gpio.ActiveLow(false)
 
-	spiBus := embd.NewSPIBus(embd.SPIMode0, 0, 4000000, 8, 0)
+	spiBus := NewSPIDevice()
 	defer spiBus.Close()
 
 	rfm, err := NewDevice(spiBus, gpio, 1, 10, true)
