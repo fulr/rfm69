@@ -58,11 +58,11 @@ func (r *Device) readReg(addr byte) (byte, error) {
 	tx[0] = addr & 0x7f
 	tx[1] = 0
 	log.Printf("read %x", addr)
-	err := r.SpiDevice.Xfer(tx)
+	rx, err := r.SpiDevice.Xfer(tx)
 	if err != nil {
 		log.Println(err)
 	}
-	return tx[1], err
+	return rx[1], err
 }
 
 func (r *Device) setup() error {
