@@ -71,7 +71,6 @@ int spi_xfer(int fd, char* tx, char* rx, int length) {
                 return 0;
 }
 */
-
 import "C"
 import "unsafe"
 
