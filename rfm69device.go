@@ -355,5 +355,6 @@ func (r *Device) writeFifo(toAddress byte, buffer []byte, requestACK, sendACK bo
 
 	copy(tx[5:], buffer[:buffersize])
 
-	return r.SpiDevice.TransferAndRecieveData(tx)
+	_, err := r.SpiDevice.Xfer(tx)
+	return err
 }
