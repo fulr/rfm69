@@ -1,6 +1,14 @@
 package rfm69
 
 /*
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
 
