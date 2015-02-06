@@ -42,6 +42,11 @@ func main() {
 	}
 	log.Print(rfm)
 
+	err = rfm.Encrypt("0123456789012345")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	quit := rfm.Loop()
 
 	sigint := make(chan os.Signal)
