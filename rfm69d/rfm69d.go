@@ -36,8 +36,9 @@ func main() {
 
 	rfm, err := rfm69.NewDevice(spiBus, gpio, 1, 10, true)
 	if err != nil {
-		t.Error(err)
+		log.Fatal(err)
 	}
-	t.Log(rfm)
+	t.Print(rfm)
 
+	rfm.Loop()
 }
