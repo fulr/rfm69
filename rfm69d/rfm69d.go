@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"os/signal"
 
 	"github.com/fulr/rfm69"
 	"github.com/kidoman/embd"
@@ -44,7 +45,7 @@ func main() {
 	quit := rfm.Loop()
 
 	sigint := make(chan os.Signal)
-	os.Notify(sigint, os.Interrupt)
+	signal.Notify(sigint, os.Interrupt)
 
 	<-sigint
 
