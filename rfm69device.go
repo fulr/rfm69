@@ -24,6 +24,14 @@ const (
 	MaxDataLen = 66
 )
 
+// Data is the data structure for the protocol
+type Data struct {
+	ToAddress  byte
+	Data       []byte
+	RequestAck bool
+	SendAck    bool
+}
+
 // NewDevice creates a new device
 func NewDevice(spi *SPIDevice, gpio embd.DigitalPin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
 	ret := &Device{
@@ -134,7 +142,7 @@ func (r *Device) setup() error {
 
 	// Encryption is persistent between resets and can trip you up during debugging.
 	// Disable it during initialization so we always start from a known state.
-	err := r.encrypt([]byte{})
+	err := r.Encrypt([]byte{})
 	if err != nil {
 		return err
 	}
@@ -171,7 +179,8 @@ func (r *Device) waitForMode() error {
 	return nil
 }
 
-func (r *Device) encrypt(key []byte) error {
+// Encrypt sets the encryption key and enables AES encryption
+func (r *Device) Encrypt(key []byte) error {
 	var turnOn byte
 	if len(key) == 16 {
 		turnOn = 1
@@ -334,8 +343,8 @@ func (r *Device) readWriteReg(reg, andMask, orMask byte) error {
 	return r.writeReg(reg, regValue)
 }
 
-func (r *Device) writeFifo(toAddress byte, buffer []byte, requestACK, sendACK bool) error {
-	buffersize := len(buffer)
+func (r *Device) writeFifo(data *Data) error {
+	buffersize := len(data.Data)
 	if buffersize > MaxDataLen {
 		buffersize = MaxDataLen
 	}
@@ -343,18 +352,22 @@ func (r *Device) writeFifo(toAddress byte, buffer []byte, requestACK, sendACK bo
 	// write to FIFO
 	tx[0] = REG_FIFO | 0x80
 	tx[1] = byte(buffersize + 3)
-	tx[2] = toAddress
+	tx[2] = data.ToAddress
 	tx[3] = r.address
 
-	if requestACK {
+	if data.RequestAck {
 		tx[4] = 0x40
 	}
-	if sendACK {
+	if data.SendAck {
 		tx[4] = 0x80
 	}
 
-	copy(tx[5:], buffer[:buffersize])
+	copy(tx[5:], data.Data[:buffersize])
 
 	_, err := r.SpiDevice.Xfer(tx)
 	return err
+}
+
+func (r *Device) readFifo() (Data, error) {
+	return Data{}, nil
 }
