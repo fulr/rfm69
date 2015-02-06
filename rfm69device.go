@@ -26,10 +26,11 @@ const (
 
 // Data is the data structure for the protocol
 type Data struct {
-	ToAddress  byte
-	Data       []byte
-	RequestAck bool
-	SendAck    bool
+	ToAddress   byte
+	FromAddress byte
+	Data        []byte
+	RequestAck  bool
+	SendAck     bool
 }
 
 // NewDevice creates a new device
@@ -369,5 +370,28 @@ func (r *Device) writeFifo(data *Data) error {
 }
 
 func (r *Device) readFifo() (Data, error) {
-	return Data{}, nil
+	data := Data{}
+	tx := new([67]byte)
+	tx[0] = REG_FIFO & 0x7f
+	rx, err := r.SpiDevice.Xfer(tx[:3])
+	if err != nil {
+		return data, err
+	}
+
+	data.ToAddress = rx[2]
+	length := rx[1] - 3
+	if length > 66 {
+		length = 66
+	}
+
+	rx, err = r.SpiDevice.Xfer(tx[:length+3])
+	if err != nil {
+		return data, err
+	}
+
+	data.FromAddress = rx[1]
+	data.SendAck = bool(rx[2]&0x80 > 0)
+	data.RequestAck = bool(rx[2]&0x40 > 0)
+	data.Data = rx[3:]
+	return data, nil
 }

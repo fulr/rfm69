@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	t.Print(rfm)
+	log.Print(rfm)
 
 	rfm.Loop()
 }
