@@ -9,7 +9,7 @@ import (
 // Loop is the main receive and transmit handling loop
 func (r *Device) Loop() chan int {
 	quit := make(chan int)
-	c := make(chan Data)
+	c := make(chan Data, 5)
 	go func() {
 		irq := make(chan int)
 
@@ -42,6 +42,14 @@ func (r *Device) Loop() chan int {
 					return
 				}
 				log.Print(data)
+				if data.ToAddress != 255 && data.RequestAck {
+					resp := Data{
+						FromAddress: r.address,
+						ToAddress:   data.FromAddress,
+						SendAck:     true,
+					}
+					c <- resp
+				}
 			case <-quit:
 				quit <- 1
 				return
