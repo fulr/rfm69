@@ -31,6 +31,7 @@ type Data struct {
 	Data        []byte
 	RequestAck  bool
 	SendAck     bool
+	Rssi        int
 }
 
 // NewDevice creates a new device
@@ -388,5 +389,11 @@ func (r *Device) readFifo() (Data, error) {
 	data.SendAck = bool(rx[2]&0x80 > 0)
 	data.RequestAck = bool(rx[2]&0x40 > 0)
 	data.Data = rx[3:]
+
+	data.Rssi, err = r.readRSSI(false)
+	if err != nil {
+		return data, err
+	}
+
 	return data, nil
 }

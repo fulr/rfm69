@@ -72,10 +72,6 @@ func (r *Device) Loop() (chan Data, chan int) {
 					log.Fatal(err)
 				}
 			case <-irq:
-				err = r.SetMode(RF_OPMODE_STANDBY)
-				if err != nil {
-					log.Fatal(err)
-				}
 
 				data, err := r.readFifo()
 				if err != nil {
@@ -94,6 +90,14 @@ func (r *Device) Loop() (chan Data, chan int) {
 					}
 					txChan <- resp
 				}
+
+				rxChan <- data
+
+				err = r.SetMode(RF_OPMODE_RECEIVER)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 			case <-quit:
 				quit <- 1
 				return
