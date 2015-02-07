@@ -216,14 +216,9 @@ func (r *Device) SetMode(newMode byte) error {
 	// we are using packet mode, so this check is not really needed
 	// but waiting for mode ready is necessary when going from sleep because the FIFO may not be immediately available from previous mode
 	if r.mode == RF_OPMODE_SLEEP {
-		for {
-			data, err := r.readReg(REG_IRQFLAGS1)
-			if err != nil {
-				return err
-			}
-			if data&RF_IRQFLAGS1_MODEREADY != 0 {
-				break
-			}
+		err = r.waitForMode()
+		if err != nil {
+			return err
 		}
 	}
 

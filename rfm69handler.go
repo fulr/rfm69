@@ -7,9 +7,11 @@ import (
 )
 
 // Loop is the main receive and transmit handling loop
-func (r *Device) Loop() chan int {
+func (r *Device) Loop() (chan Data, chan int) {
 	quit := make(chan int)
-	c := make(chan Data, 5)
+	txChan := make(chan Data, 5)
+	rxChan := make(chan Data, 5)
+
 	go func() {
 		irq := make(chan int)
 
@@ -27,33 +29,70 @@ func (r *Device) Loop() chan int {
 
 		for {
 			select {
-			case dataToTransmit := <-c:
+			case dataToTransmit := <-txChan:
 				// can send?
-				r.SetMode(RF_OPMODE_STANDBY)
-				r.waitForMode()
-				r.writeFifo(&dataToTransmit)
+				err = r.SetMode(RF_OPMODE_STANDBY)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = r.waitForMode()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = r.writeFifo(&dataToTransmit)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				log.Print("transmit")
 				log.Print(dataToTransmit)
-				r.SetMode(RF_OPMODE_TRANSMITTER)
-				r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_00)
+
+				err = r.SetMode(RF_OPMODE_TRANSMITTER)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_00)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				<-irq
 				log.Print("transmit done")
-				r.SetMode(RF_OPMODE_RECEIVER)
-				r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_01)
+
+				err = r.SetMode(RF_OPMODE_RECEIVER)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_01)
+				if err != nil {
+					log.Fatal(err)
+				}
 			case <-irq:
+				err = r.SetMode(RF_OPMODE_STANDBY)
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				data, err := r.readFifo()
 				if err != nil {
 					log.Print(err)
 					return
 				}
+
+				log.Print("receive")
 				log.Print(data)
+
 				if data.ToAddress != 255 && data.RequestAck {
 					resp := Data{
 						FromAddress: r.address,
 						ToAddress:   data.FromAddress,
 						SendAck:     true,
 					}
-					c <- resp
+					txChan <- resp
 				}
 			case <-quit:
 				quit <- 1
@@ -61,5 +100,6 @@ func (r *Device) Loop() chan int {
 			}
 		}
 	}()
-	return quit
+
+	return rxChan, quit
 }

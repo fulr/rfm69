@@ -35,13 +35,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	quit := rfm.Loop()
+	rxChan, quit := rfm.Loop()
 
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, os.Interrupt, os.Kill)
 
 	for {
 		select {
+		case data := <-rxChan:
+			log.Print("main got data")
+			log.Print(data)
 		case <-sigint:
 			quit <- 1
 			<-quit
