@@ -14,6 +14,7 @@ func (r *Device) Loop() chan int {
 		irq := make(chan int)
 
 		r.gpio.BeginWatch(gpio.EdgeRising, func() {
+			log.Print("irq")
 			irq <- 1
 		})
 
@@ -29,10 +30,13 @@ func (r *Device) Loop() chan int {
 			case dataToTransmit := <-c:
 				// can send?
 				r.SetMode(RF_OPMODE_STANDBY)
+				r.waitForMode()
 				r.writeFifo(&dataToTransmit)
-				r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_00)
+				log.Print("transmit")
 				r.SetMode(RF_OPMODE_TRANSMITTER)
+				r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_00)
 				<-irq
+				log.Print("transmit done")
 				r.SetMode(RF_OPMODE_RECEIVER)
 				r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_01)
 			case <-irq:
