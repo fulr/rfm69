@@ -4,13 +4,13 @@ package rfm69
 import (
 	"log"
 
-	"github.com/kidoman/embd"
+	"github.com/davecheney/gpio"
 )
 
 // Device RFM69 Device
 type Device struct {
 	SpiDevice  *SPIDevice
-	gpio       embd.DigitalPin
+	gpio       gpio.Pin
 	mode       byte
 	address    byte
 	network    byte
@@ -34,7 +34,7 @@ type Data struct {
 }
 
 // NewDevice creates a new device
-func NewDevice(spi *SPIDevice, gpio embd.DigitalPin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
+func NewDevice(spi *SPIDevice, gpio gpio.Pin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
 	ret := &Device{
 		SpiDevice: spi,
 		gpio:      gpio,

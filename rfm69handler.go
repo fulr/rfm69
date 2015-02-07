@@ -3,7 +3,7 @@ package rfm69
 import (
 	"log"
 
-	"github.com/kidoman/embd"
+	"github.com/davecheney/gpio"
 )
 
 // Loop is the main receive and transmit handling loop
@@ -13,7 +13,7 @@ func (r *Device) Loop() chan int {
 	go func() {
 		irq := make(chan int)
 
-		r.gpio.Watch(embd.EdgeRising, func(pin embd.DigitalPin) {
+		r.gpio.BeginWatch(gpio.EdgeRising, func() {
 			irq <- 1
 		})
 
