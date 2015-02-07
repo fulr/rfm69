@@ -49,11 +49,15 @@ func main() {
 
 	quit := rfm.Loop()
 
-	sigint := make(chan os.Signal)
+	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, os.Interrupt)
 
-	<-sigint
-
-	quit <- 1
-	<-quit
+	for {
+		select {
+		case <-sigint:
+			quit <- 1
+			<-quit
+			return
+		}
+	}
 }
