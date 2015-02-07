@@ -42,7 +42,7 @@ func main() {
 	}
 	log.Print(rfm)
 
-	err = rfm.Encrypt("0123456789012345")
+	err = rfm.Encrypt([]byte("0123456789012345"))
 	if err != nil {
 		log.Fatal(err)
 	}
