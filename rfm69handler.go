@@ -33,6 +33,7 @@ func (r *Device) Loop() chan int {
 				r.waitForMode()
 				r.writeFifo(&dataToTransmit)
 				log.Print("transmit")
+				log.Print(dataToTransmit)
 				r.SetMode(RF_OPMODE_TRANSMITTER)
 				r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_00)
 				<-irq
