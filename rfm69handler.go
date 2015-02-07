@@ -49,12 +49,12 @@ func (r *Device) Loop() (chan Data, chan int) {
 				log.Print("transmit")
 				log.Print(dataToTransmit)
 
-				err = r.SetMode(RF_OPMODE_TRANSMITTER)
+				err = r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_00)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_00)
+				err = r.SetMode(RF_OPMODE_TRANSMITTER)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -62,7 +62,12 @@ func (r *Device) Loop() (chan Data, chan int) {
 				<-irq
 				log.Print("transmit done")
 
-				err = r.SetMode(RF_OPMODE_RECEIVER)
+				err = r.SetMode(RF_OPMODE_STANDBY)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = r.waitForMode()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -71,7 +76,22 @@ func (r *Device) Loop() (chan Data, chan int) {
 				if err != nil {
 					log.Fatal(err)
 				}
+				err = r.SetMode(RF_OPMODE_RECEIVER)
+				if err != nil {
+					log.Fatal(err)
+				}
 			case <-irq:
+				if r.mode != RF_OPMODE_RECEIVER {
+					continue
+				}
+
+				flags, err := r.readReg(REG_IRQFLAGS2)
+				if err != nil {
+					return
+				}
+				if flags&RF_IRQFLAGS2_PAYLOADREADY == 0 {
+					continue
+				}
 
 				data, err := r.readFifo()
 				if err != nil {
