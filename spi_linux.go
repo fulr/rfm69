@@ -84,7 +84,10 @@ int spi_xfer(int fd, char* tx, char* rx, int length) {
 }
 */
 import "C"
-import "unsafe"
+import (
+	"log"
+	"unsafe"
+)
 import "errors"
 
 // SPIDevice device
@@ -107,7 +110,9 @@ func NewSPIDevice() (*SPIDevice, error) {
 func (d *SPIDevice) Xfer(tx []byte) ([]byte, error) {
 	length := len(tx)
 	rx := make([]byte, length)
+	log.Print("sending", tx)
 	ret := C.spi_xfer(d.fd, (*C.char)(unsafe.Pointer(&tx[0])), (*C.char)(unsafe.Pointer(&rx[0])), C.int(length))
+	log.Print("got", rx)
 	if ret < 0 {
 		return nil, errors.New("could not xfer")
 	}
