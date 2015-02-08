@@ -25,7 +25,7 @@ func main() {
 	}
 	defer spiBus.Close()
 
-	rfm, err := rfm69.NewDevice(spiBus, pin, 1, 10, true)
+	rfm, err := rfm69.NewDevice(spiBus, pin, 1, 10, false)
 	if err != nil {
 		log.Fatal(err)
 	}

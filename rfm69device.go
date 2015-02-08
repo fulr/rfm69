@@ -117,10 +117,6 @@ func (r *Device) setup() error {
 		/* 0x6F */ {REG_TESTDAGC, RF_DAGC_IMPROVED_LOWBETA0}, // run DAGC continuously in RX mode for Fading Margin Improvement, recommended default for AfcLowBetaOn=0
 	}
 
-	//digitalWrite(_slaveSelectPin, HIGH)
-	//pinMode(_slaveSelectPin, OUTPUT)
-	//SPI.begin()
-
 	log.Println("start setup")
 	for data, err := r.readReg(REG_SYNCVALUE1); err == nil && data != 0xAA; data, err = r.readReg(REG_SYNCVALUE1) {
 		err := r.writeReg(REG_SYNCVALUE1, 0xAA)
@@ -160,13 +156,10 @@ func (r *Device) setup() error {
 	if err != nil {
 		return err
 	}
-	r.waitForMode()
-	//while((readReg(REG_IRQFLAGS1) & RF_IRQFLAGS1_MODEREADY) == 0x00) // wait for ModeReady
-	//attachInterrupt(_interruptNum, RFM69::isr0, RISING);
 
-	//selfPointer = this
-	//_address = nodeID
-	return nil
+	err = r.waitForMode()
+
+	return err
 }
 
 func (r *Device) waitForMode() error {
