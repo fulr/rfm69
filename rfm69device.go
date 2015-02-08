@@ -37,11 +37,12 @@ type Data struct {
 // NewDevice creates a new device
 func NewDevice(spi *SPIDevice, gpio gpio.Pin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
 	ret := &Device{
-		SpiDevice: spi,
-		gpio:      gpio,
-		network:   networkID,
-		address:   nodeID,
-		isRFM69HW: isRfm69HW,
+		SpiDevice:  spi,
+		gpio:       gpio,
+		network:    networkID,
+		address:    nodeID,
+		isRFM69HW:  isRfm69HW,
+		powerLevel: 31,
 	}
 
 	log.Println("before setup")
