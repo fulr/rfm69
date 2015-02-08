@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/davecheney/gpio"
 	"github.com/fulr/rfm69"
@@ -35,7 +36,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	rxChan, quit := rfm.Loop()
+	rxChan, txChan, quit := rfm.Loop()
 
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, os.Interrupt, os.Kill)
@@ -49,6 +50,13 @@ func main() {
 			quit <- 1
 			<-quit
 			return
+		case <-time.After(10 * time.Second):
+			txChan <- rfm69.Data{
+				ToAddress:   99,
+				FromAddress: 1,
+				Data:        []byte{1, 2, 3},
+				RequestAck:  true,
+			}
 		}
 	}
 }

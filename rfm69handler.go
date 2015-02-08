@@ -7,7 +7,7 @@ import (
 )
 
 // Loop is the main receive and transmit handling loop
-func (r *Device) Loop() (chan Data, chan int) {
+func (r *Device) Loop() (chan Data, chan Data, chan int) {
 	quit := make(chan int)
 	txChan := make(chan Data, 5)
 	rxChan := make(chan Data, 5)
@@ -106,6 +106,7 @@ func (r *Device) Loop() (chan Data, chan int) {
 					resp := Data{
 						FromAddress: r.address,
 						ToAddress:   data.FromAddress,
+						Data:        data.Data,
 						SendAck:     true,
 					}
 					txChan <- resp
@@ -125,5 +126,5 @@ func (r *Device) Loop() (chan Data, chan int) {
 		}
 	}()
 
-	return rxChan, quit
+	return rxChan, txChan, quit
 }
