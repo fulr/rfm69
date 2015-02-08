@@ -50,7 +50,7 @@ func main() {
 			quit <- 1
 			<-quit
 			return
-		case <-time.After(10 * time.Second):
+		case <-time.After(3 * time.Second):
 			txChan <- rfm69.Data{
 				ToAddress:   99,
 				FromAddress: 1,
