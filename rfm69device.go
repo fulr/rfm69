@@ -67,11 +67,11 @@ func (r *Device) readReg(addr byte) (byte, error) {
 	tx := make([]uint8, 2)
 	tx[0] = addr & 0x7f
 	tx[1] = 0
-	log.Printf("read %x", addr)
 	rx, err := r.SpiDevice.Xfer(tx)
 	if err != nil {
 		log.Println(err)
 	}
+	log.Printf("read %x: %x", addr, rx[1])
 	return rx[1], err
 }
 
@@ -322,8 +322,7 @@ func (r *Device) readRSSI(forceTrigger bool) (rssi int, err error) {
 			}
 		}
 	}
-	var data byte
-	data, err = r.readReg(REG_RSSIVALUE)
+	data, err := r.readReg(REG_RSSIVALUE)
 	if err != nil {
 		return
 	}
