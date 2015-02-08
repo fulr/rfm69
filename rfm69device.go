@@ -202,7 +202,7 @@ func (r *Device) SetMode(newMode byte) error {
 	}
 
 	if newMode == RF_OPMODE_RECEIVER || newMode == RF_OPMODE_TRANSMITTER {
-		err = r.setHighPowerRegs(newMode == RF_OPMODE_RECEIVER)
+		err = r.setHighPowerRegs(newMode == RF_OPMODE_TRANSMITTER)
 		if err != nil {
 			return err
 		}
