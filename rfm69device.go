@@ -196,16 +196,16 @@ func (r *Device) SetMode(newMode byte) error {
 		return nil
 	}
 
-	err := r.readWriteReg(REG_OPMODE, 0xE3, newMode)
-	if err != nil {
-		return err
-	}
-
 	if r.isRFM69HW && (newMode == RF_OPMODE_RECEIVER || newMode == RF_OPMODE_TRANSMITTER) {
-		err = r.setHighPowerRegs(newMode == RF_OPMODE_TRANSMITTER)
+		err := r.setHighPowerRegs(newMode == RF_OPMODE_TRANSMITTER)
 		if err != nil {
 			return err
 		}
+	}
+
+	err := r.readWriteReg(REG_OPMODE, 0xE3, newMode)
+	if err != nil {
+		return err
 	}
 
 	// we are using packet mode, so this check is not really needed
