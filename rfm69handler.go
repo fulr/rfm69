@@ -30,13 +30,20 @@ func (r *Device) Loop() (chan Data, chan Data, chan int) {
 		for {
 			select {
 			case dataToTransmit := <-txChan:
-				// can send?
+				// TODO: can send?
+				r.readWriteReg(REG_PACKETCONFIG2, 0xFB, RF_PACKET2_RXRESTART) // avoid RX deadlocks
+
 				err = r.SetMode(RF_OPMODE_STANDBY)
 				if err != nil {
 					log.Fatal(err)
 				}
 
 				err = r.waitForMode()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_00)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -48,11 +55,6 @@ func (r *Device) Loop() (chan Data, chan Data, chan int) {
 
 				log.Print("transmit")
 				log.Print(dataToTransmit)
-
-				err = r.writeReg(REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_00)
-				if err != nil {
-					log.Fatal(err)
-				}
 
 				err = r.SetMode(RF_OPMODE_TRANSMITTER)
 				if err != nil {
