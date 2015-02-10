@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/davecheney/gpio"
-	spidev "github.com/fulr/spidev"
+	"github.com/fulr/spidev"
 )
 
 const (
