@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/davecheney/gpio"
+	spidev "github.com/fulr/spidev"
 )
 
 const (
@@ -19,7 +20,7 @@ func main() {
 	}
 	defer pin.Close()
 
-	spiBus, err := NewSPIDevice("/dev/spidev0.0")
+	spiBus, err := spidev.NewSPIDevice("/dev/spidev0.0")
 	if err != nil {
 		panic(err)
 	}

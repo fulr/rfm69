@@ -5,11 +5,12 @@ import (
 	"log"
 
 	"github.com/davecheney/gpio"
+	spidev "github.com/fulr/spidev"
 )
 
 // Device RFM69 Device
 type Device struct {
-	SpiDevice  *SPIDevice
+	SpiDevice  *spidev.SPIDevice
 	gpio       gpio.Pin
 	mode       byte
 	address    byte
@@ -35,7 +36,7 @@ type Data struct {
 }
 
 // NewDevice creates a new device
-func NewDevice(spi *SPIDevice, gpio gpio.Pin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
+func NewDevice(spi *spidev.SPIDevice, gpio gpio.Pin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
 	ret := &Device{
 		SpiDevice:  spi,
 		gpio:       gpio,
