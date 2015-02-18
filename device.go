@@ -57,7 +57,7 @@ func (r *Device) writeReg(addr, data byte) error {
 	tx := make([]byte, 2)
 	tx[0] = addr | 0x80
 	tx[1] = data
-	log.Printf("write %x: %x", addr, data)
+	//log.Printf("write %x: %x", addr, data)
 	_, err := r.SpiDevice.Xfer(tx)
 	if err != nil {
 		log.Println(err)
@@ -73,7 +73,7 @@ func (r *Device) readReg(addr byte) (byte, error) {
 	if err != nil {
 		log.Println(err)
 	}
-	log.Printf("read %x: %x", addr, rx[1])
+	//log.Printf("read %x: %x", addr, rx[1])
 	return rx[1], err
 }
 
