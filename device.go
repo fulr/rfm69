@@ -104,7 +104,7 @@ func (r *Device) setup() error {
 		/* 0x25 */ {REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_01}, // DIO0 is the only IRQ we're using
 		/* 0x26 */ {REG_DIOMAPPING2, RF_DIOMAPPING2_CLKOUT_OFF}, // DIO5 ClkOut disable for power saving
 		/* 0x28 */ {REG_IRQFLAGS2, RF_IRQFLAGS2_FIFOOVERRUN}, // writing to this bit ensures that the FIFO & status flags are reset
-		/* 0x29 */ {REG_RSSITHRESH, 220}, // must be set to dBm = (-Sensitivity / 2), default is 0xE4 = 228 so -114dBm
+		/* 0x29 */ //{REG_RSSITHRESH, 220}, // must be set to dBm = (-Sensitivity / 2), default is 0xE4 = 228 so -114dBm
 		///* 0x2D */ { REG_PREAMBLELSB, RF_PREAMBLESIZE_LSB_VALUE } // default 3 preamble bytes 0xAAAAAA
 		/* 0x2E */ {REG_SYNCCONFIG, RF_SYNC_ON | RF_SYNC_FIFOFILL_AUTO | RF_SYNC_SIZE_2 | RF_SYNC_TOL_0},
 		/* 0x2F */ {REG_SYNCVALUE1, 0x2D}, // attempt to make this compatible with sync1 byte of RFM12B lib
@@ -197,16 +197,16 @@ func (r *Device) SetMode(newMode byte) error {
 		return nil
 	}
 
+	err := r.readWriteReg(REG_OPMODE, 0xE3, newMode)
+	if err != nil {
+		return err
+	}
+
 	if r.isRFM69HW && (newMode == RF_OPMODE_RECEIVER || newMode == RF_OPMODE_TRANSMITTER) {
 		err := r.setHighPowerRegs(newMode == RF_OPMODE_TRANSMITTER)
 		if err != nil {
 			return err
 		}
-	}
-
-	err := r.readWriteReg(REG_OPMODE, 0xE3, newMode)
-	if err != nil {
-		return err
 	}
 
 	// we are using packet mode, so this check is not really needed
