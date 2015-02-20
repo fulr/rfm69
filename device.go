@@ -360,7 +360,14 @@ func (r *Device) writeFifo(data *Data) error {
 }
 
 func (r *Device) readFifo() (Data, error) {
+	var err error
 	data := Data{}
+
+	data.Rssi, err = r.readRSSI(false)
+	if err != nil {
+		return data, err
+	}
+
 	tx := new([67]byte)
 	tx[0] = REG_FIFO & 0x7f
 	rx, err := r.SpiDevice.Xfer(tx[:3])
@@ -383,11 +390,6 @@ func (r *Device) readFifo() (Data, error) {
 	data.SendAck = bool(rx[2]&0x80 > 0)
 	data.RequestAck = bool(rx[2]&0x40 > 0)
 	data.Data = rx[3:]
-
-	data.Rssi, err = r.readRSSI(false)
-	if err != nil {
-		return data, err
-	}
 
 	return data, nil
 }
