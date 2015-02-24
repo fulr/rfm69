@@ -46,9 +46,7 @@ func NewDevice(spi *spidev.SPIDevice, gpio gpio.Pin, nodeID, networkID byte, isR
 		powerLevel: 31,
 	}
 
-	log.Println("before setup")
 	err := ret.setup()
-	log.Println("after setup")
 
 	return ret, err
 }
@@ -73,7 +71,6 @@ func (r *Device) readReg(addr byte) (byte, error) {
 	if err != nil {
 		log.Println(err)
 	}
-	//log.Printf("read %x: %x", addr, rx[1])
 	return rx[1], err
 }
 
@@ -118,7 +115,6 @@ func (r *Device) setup() error {
 		/* 0x6F */ {REG_TESTDAGC, RF_DAGC_IMPROVED_LOWBETA0}, // run DAGC continuously in RX mode for Fading Margin Improvement, recommended default for AfcLowBetaOn=0
 	}
 
-	log.Println("start setup")
 	for data, err := r.readReg(REG_SYNCVALUE1); err == nil && data != 0xAA; data, err = r.readReg(REG_SYNCVALUE1) {
 		err := r.writeReg(REG_SYNCVALUE1, 0xAA)
 		if err != nil {

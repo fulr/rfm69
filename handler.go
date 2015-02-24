@@ -16,7 +16,6 @@ func (r *Device) Loop() (chan Data, chan Data, chan int) {
 		irq := make(chan int)
 
 		r.gpio.BeginWatch(gpio.EdgeRising, func() {
-			log.Print("irq")
 			irq <- 1
 		})
 
@@ -53,8 +52,7 @@ func (r *Device) Loop() (chan Data, chan Data, chan int) {
 					log.Fatal(err)
 				}
 
-				log.Print("transmit")
-				log.Print(dataToTransmit)
+				log.Print("transmit", dataToTransmit)
 
 				err = r.SetMode(RF_OPMODE_TRANSMITTER)
 				if err != nil {
@@ -101,8 +99,7 @@ func (r *Device) Loop() (chan Data, chan Data, chan int) {
 					return
 				}
 
-				log.Print("receive")
-				log.Print(data)
+				log.Print("receive", data)
 
 				if data.ToAddress != 255 && data.RequestAck {
 					resp := Data{
