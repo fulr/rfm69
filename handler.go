@@ -105,7 +105,6 @@ func (r *Device) Loop() (chan Data, chan Data, chan int) {
 					resp := Data{
 						FromAddress: r.address,
 						ToAddress:   data.FromAddress,
-						Data:        data.Data,
 						SendAck:     true,
 					}
 					txChan <- resp
