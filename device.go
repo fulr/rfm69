@@ -8,6 +8,11 @@ import (
 	"github.com/fulr/spidev"
 )
 
+const (
+	spiPath = "/dev/spidev0.0"
+	irqPin  = gpio.GPIO25
+)
+
 // Device RFM69 Device
 type Device struct {
 	SpiDevice  *spidev.SPIDevice
@@ -36,19 +41,39 @@ type Data struct {
 }
 
 // NewDevice creates a new device
-func NewDevice(spi *spidev.SPIDevice, gpio gpio.Pin, nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
+func NewDevice(nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
+	pin, err := gpio.OpenPin(irqPin, gpio.ModeInput)
+	if err != nil {
+		return nil, err
+	}
+
+	spi, err := spidev.NewSPIDevice(spiPath)
+	if err != nil {
+		return nil, err
+	}
+
 	ret := &Device{
 		SpiDevice:  spi,
-		gpio:       gpio,
+		gpio:       pin,
 		network:    networkID,
 		address:    nodeID,
 		isRFM69HW:  isRfm69HW,
 		powerLevel: 31,
 	}
 
-	err := ret.setup()
+	err = ret.setup()
 
 	return ret, err
+}
+
+// Close cleans up
+func (r *Device) Close() error {
+	err := r.gpio.Close()
+	if err != nil {
+		return err
+	}
+	r.SpiDevice.Close()
+	return err
 }
 
 func (r *Device) writeReg(addr, data byte) error {
@@ -82,11 +107,9 @@ func (r *Device) setup() error {
 		/* 0x04 */ {REG_BITRATELSB, RF_BITRATELSB_55555},
 		/* 0x05 */ {REG_FDEVMSB, RF_FDEVMSB_50000}, // default: 5KHz, (FDEV + BitRate / 2 <= 500KHz)
 		/* 0x06 */ {REG_FDEVLSB, RF_FDEVLSB_50000},
-
 		/* 0x07 */ {REG_FRFMSB, RF_FRFMSB_868},
 		/* 0x08 */ {REG_FRFMID, RF_FRFMID_868},
 		/* 0x09 */ {REG_FRFLSB, RF_FRFLSB_868},
-
 		// looks like PA1 and PA2 are not implemented on RFM69W, hence the max output power is 13dBm
 		// +17dBm and +20dBm are possible on RFM69HW
 		// +13dBm formula: Pout = -18 + OutputPower (with PA0 or PA1**)
@@ -94,7 +117,6 @@ func (r *Device) setup() error {
 		// +20dBm formula: Pout = -11 + OutputPower (with PA1 and PA2)** and high power PA settings (section 3.3.7 in datasheet)
 		///* 0x11 */ { REG_PALEVEL, RF_PALEVEL_PA0_ON | RF_PALEVEL_PA1_OFF | RF_PALEVEL_PA2_OFF | RF_PALEVEL_OUTPUTPOWER_11111},
 		///* 0x13 */ { REG_OCP, RF_OCP_ON | RF_OCP_TRIM_95 }, // over current protection (default is 95mA)
-
 		// RXBW defaults are { REG_RXBW, RF_RXBW_DCCFREQ_010 | RF_RXBW_MANT_24 | RF_RXBW_EXP_5} (RxBw: 10.4KHz)
 		/* 0x19 */ {REG_RXBW, RF_RXBW_DCCFREQ_010 | RF_RXBW_MANT_16 | RF_RXBW_EXP_2}, // (BitRate < 2 * RxBw)
 		//for BR-19200: /* 0x19 */ { REG_RXBW, RF_RXBW_DCCFREQ_010 | RF_RXBW_MANT_24 | RF_RXBW_EXP_3 },
@@ -114,48 +136,37 @@ func (r *Device) setup() error {
 		//for BR-19200: /* 0x3D */ { REG_PACKETCONFIG2, RF_PACKET2_RXRESTARTDELAY_NONE | RF_PACKET2_AUTORXRESTART_ON | RF_PACKET2_AES_OFF }, // RXRESTARTDELAY must match transmitter PA ramp-down time (bitrate dependent)
 		/* 0x6F */ {REG_TESTDAGC, RF_DAGC_IMPROVED_LOWBETA0}, // run DAGC continuously in RX mode for Fading Margin Improvement, recommended default for AfcLowBetaOn=0
 	}
-
 	for data, err := r.readReg(REG_SYNCVALUE1); err == nil && data != 0xAA; data, err = r.readReg(REG_SYNCVALUE1) {
 		err := r.writeReg(REG_SYNCVALUE1, 0xAA)
 		if err != nil {
 			return err
 		}
 	}
-
 	for data, err := r.readReg(REG_SYNCVALUE1); err == nil && data != 0x55; data, err = r.readReg(REG_SYNCVALUE1) {
 		r.writeReg(REG_SYNCVALUE1, 0x55)
 		if err != nil {
 			return err
 		}
 	}
-
 	for _, c := range config {
 		err := r.writeReg(c[0], c[1])
 		if err != nil {
 			return err
 		}
 	}
-
-	// Encryption is persistent between resets and can trip you up during debugging.
-	// Disable it during initialization so we always start from a known state.
 	err := r.Encrypt([]byte{})
 	if err != nil {
 		return err
 	}
-
-	// called regardless if it's a RFM69W or RFM69HW
 	err = r.setHighPower(r.isRFM69HW)
 	if err != nil {
 		return err
 	}
-
 	err = r.SetMode(RF_OPMODE_STANDBY)
 	if err != nil {
 		return err
 	}
-
 	err = r.waitForMode()
-
 	return err
 }
 
@@ -192,53 +203,54 @@ func (r *Device) SetMode(newMode byte) error {
 	if newMode == r.mode {
 		return nil
 	}
-
 	err := r.readWriteReg(REG_OPMODE, 0xE3, newMode)
 	if err != nil {
 		return err
 	}
-
 	if r.isRFM69HW && (newMode == RF_OPMODE_RECEIVER || newMode == RF_OPMODE_TRANSMITTER) {
 		err := r.setHighPowerRegs(newMode == RF_OPMODE_TRANSMITTER)
 		if err != nil {
 			return err
 		}
 	}
-
-	// we are using packet mode, so this check is not really needed
-	// but waiting for mode ready is necessary when going from sleep because the FIFO may not be immediately available from previous mode
 	if r.mode == RF_OPMODE_SLEEP {
 		err = r.waitForMode()
 		if err != nil {
 			return err
 		}
 	}
-
 	r.mode = newMode
+	return nil
+}
+
+// SetModeAndWait sets the mode and waits for it
+func (r *Device) SetModeAndWait(newMode byte) error {
+	err := r.SetMode(RF_OPMODE_STANDBY)
+	if err != nil {
+		return err
+	}
+	err = r.waitForMode()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (r *Device) setHighPower(turnOn bool) error {
 	r.isRFM69HW = turnOn
-
 	ocp := byte(RF_OCP_ON)
 	if r.isRFM69HW {
 		ocp = RF_OCP_OFF
 	}
-
 	err := r.writeReg(REG_OCP, ocp)
 	if err != nil {
 		return err
 	}
-
-	if r.isRFM69HW { // turning ON
-		// enable P1 & P2 amplifier stages
+	if r.isRFM69HW {
 		err = r.readWriteReg(REG_PALEVEL, 0x1F, RF_PALEVEL_PA1_ON|RF_PALEVEL_PA2_ON)
 	} else {
-		// enable P0 only
 		err = r.readWriteReg(REG_PALEVEL, 0, RF_PALEVEL_PA0_ON|RF_PALEVEL_PA1_OFF|RF_PALEVEL_PA2_OFF|r.powerLevel)
 	}
-
 	return err
 }
 
@@ -341,16 +353,13 @@ func (r *Device) writeFifo(data *Data) error {
 	tx[1] = byte(buffersize + 3)
 	tx[2] = data.ToAddress
 	tx[3] = r.address
-
 	if data.RequestAck {
 		tx[4] = 0x40
 	}
 	if data.SendAck {
 		tx[4] = 0x80
 	}
-
 	copy(tx[5:], data.Data[:buffersize])
-
 	_, err := r.SpiDevice.Xfer(tx)
 	return err
 }
@@ -358,34 +367,28 @@ func (r *Device) writeFifo(data *Data) error {
 func (r *Device) readFifo() (Data, error) {
 	var err error
 	data := Data{}
-
 	data.Rssi, err = r.readRSSI(false)
 	if err != nil {
 		return data, err
 	}
-
 	tx := new([67]byte)
 	tx[0] = REG_FIFO & 0x7f
 	rx, err := r.SpiDevice.Xfer(tx[:3])
 	if err != nil {
 		return data, err
 	}
-
 	data.ToAddress = rx[2]
 	length := rx[1] - 3
 	if length > 66 {
 		length = 66
 	}
-
 	rx, err = r.SpiDevice.Xfer(tx[:length+3])
 	if err != nil {
 		return data, err
 	}
-
 	data.FromAddress = rx[1]
 	data.SendAck = bool(rx[2]&0x80 > 0)
 	data.RequestAck = bool(rx[2]&0x40 > 0)
 	data.Data = rx[3:]
-
 	return data, nil
 }
