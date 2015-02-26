@@ -10,7 +10,6 @@ import (
 
 const (
 	spiPath = "/dev/spidev0.0"
-	irqPin  = gpio.GPIO25
 )
 
 // Device RFM69 Device
@@ -42,7 +41,7 @@ type Data struct {
 
 // NewDevice creates a new device
 func NewDevice(nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
-	pin, err := gpio.OpenPin(irqPin, gpio.ModeInput)
+	pin, err := getPin()
 	if err != nil {
 		return nil, err
 	}

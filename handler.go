@@ -7,14 +7,14 @@ import (
 )
 
 // Loop is the main receive and transmit handling loop
-func (r *Device) Loop() (chan Data, chan int) {
-	quit := make(chan int)
-	ch := make(chan Data, 5)
+func (r *Device) Loop() (chan *Data, chan bool) {
+	quit := make(chan bool)
+	ch := make(chan *Data, 5)
 	go r.loopInternal(ch, quit)
 	return ch, quit
 }
 
-func (r *Device) loopInternal(ch chan Data, quit chan int) {
+func (r *Device) loopInternal(ch chan *Data, quit chan bool) {
 	irq := make(chan int)
 	r.gpio.BeginWatch(gpio.EdgeRising, func() {
 		irq <- 1
@@ -41,7 +41,7 @@ func (r *Device) loopInternal(ch chan Data, quit chan int) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = r.writeFifo(&dataToTransmit)
+			err = r.writeFifo(dataToTransmit)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -49,7 +49,9 @@ func (r *Device) loopInternal(ch chan Data, quit chan int) {
 			if err != nil {
 				log.Fatal(err)
 			}
+
 			<-irq
+
 			err = r.SetModeAndWait(RF_OPMODE_STANDBY)
 			if err != nil {
 				log.Fatal(err)
@@ -78,13 +80,13 @@ func (r *Device) loopInternal(ch chan Data, quit chan int) {
 				log.Print(err)
 				return
 			}
-			ch <- data
+			ch <- &data
 			err = r.SetMode(RF_OPMODE_RECEIVER)
 			if err != nil {
 				log.Fatal(err)
 			}
 		case <-quit:
-			quit <- 1
+			quit <- true
 			return
 		}
 	}
