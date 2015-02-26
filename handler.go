@@ -7,14 +7,15 @@ import (
 )
 
 // Loop is the main receive and transmit handling loop
-func (r *Device) Loop() (chan *Data, chan bool) {
-	quit := make(chan bool)
-	ch := make(chan *Data, 5)
-	go r.loopInternal(ch, quit)
-	return ch, quit
+func (r *Device) Loop() (rx chan *Data, tx chan *Data, quit chan bool) {
+	quit = make(chan bool)
+	rx = make(chan *Data, 5)
+	tx = make(chan *Data, 5)
+	go r.loopInternal(rx, tx, quit)
+	return
 }
 
-func (r *Device) loopInternal(ch chan *Data, quit chan bool) {
+func (r *Device) loopInternal(rx chan *Data, tx chan *Data, quit chan bool) {
 	irq := make(chan int)
 	r.gpio.BeginWatch(gpio.EdgeRising, func() {
 		irq <- 1
@@ -30,7 +31,7 @@ func (r *Device) loopInternal(ch chan *Data, quit chan bool) {
 
 	for {
 		select {
-		case dataToTransmit := <-ch:
+		case dataToTransmit := <-tx:
 			// TODO: can send?
 			r.readWriteReg(REG_PACKETCONFIG2, 0xFB, RF_PACKET2_RXRESTART) // avoid RX deadlocks
 			err = r.SetModeAndWait(RF_OPMODE_STANDBY)
@@ -80,7 +81,7 @@ func (r *Device) loopInternal(ch chan *Data, quit chan bool) {
 				log.Print(err)
 				return
 			}
-			ch <- &data
+			rx <- &data
 			err = r.SetMode(RF_OPMODE_RECEIVER)
 			if err != nil {
 				log.Fatal(err)
