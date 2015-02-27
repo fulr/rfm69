@@ -14,7 +14,7 @@ const (
 
 // Device RFM69 Device
 type Device struct {
-	SpiDevice  *spidev.SPIDevice
+	spiDevice  *spidev.SPIDevice
 	gpio       gpio.Pin
 	mode       byte
 	address    byte
@@ -29,16 +29,6 @@ const (
 	MaxDataLen = 66
 )
 
-// Data is the data structure for the protocol
-type Data struct {
-	ToAddress   byte
-	FromAddress byte
-	Data        []byte
-	RequestAck  bool
-	SendAck     bool
-	Rssi        int
-}
-
 // NewDevice creates a new device
 func NewDevice(nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
 	pin, err := getPin()
@@ -52,7 +42,7 @@ func NewDevice(nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
 	}
 
 	ret := &Device{
-		SpiDevice:  spi,
+		spiDevice:  spi,
 		gpio:       pin,
 		network:    networkID,
 		address:    nodeID,
@@ -71,7 +61,7 @@ func (r *Device) Close() error {
 	if err != nil {
 		return err
 	}
-	r.SpiDevice.Close()
+	r.spiDevice.Close()
 	return err
 }
 
@@ -80,7 +70,7 @@ func (r *Device) writeReg(addr, data byte) error {
 	tx[0] = addr | 0x80
 	tx[1] = data
 	//log.Printf("write %x: %x", addr, data)
-	_, err := r.SpiDevice.Xfer(tx)
+	_, err := r.spiDevice.Xfer(tx)
 	if err != nil {
 		log.Println(err)
 	}
@@ -91,7 +81,7 @@ func (r *Device) readReg(addr byte) (byte, error) {
 	tx := make([]uint8, 2)
 	tx[0] = addr & 0x7f
 	tx[1] = 0
-	rx, err := r.SpiDevice.Xfer(tx)
+	rx, err := r.spiDevice.Xfer(tx)
 	if err != nil {
 		log.Println(err)
 	}
@@ -190,7 +180,7 @@ func (r *Device) Encrypt(key []byte) error {
 		tx := make([]byte, 17)
 		tx[0] = REG_AESKEY1 | 0x80
 		copy(tx[1:], key)
-		if _, err := r.SpiDevice.Xfer(tx); err != nil {
+		if _, err := r.spiDevice.Xfer(tx); err != nil {
 			return err
 		}
 	}
@@ -359,7 +349,7 @@ func (r *Device) writeFifo(data *Data) error {
 		tx[4] = 0x80
 	}
 	copy(tx[5:], data.Data[:buffersize])
-	_, err := r.SpiDevice.Xfer(tx)
+	_, err := r.spiDevice.Xfer(tx)
 	return err
 }
 
@@ -372,7 +362,7 @@ func (r *Device) readFifo() (Data, error) {
 	}
 	tx := new([67]byte)
 	tx[0] = REG_FIFO & 0x7f
-	rx, err := r.SpiDevice.Xfer(tx[:3])
+	rx, err := r.spiDevice.Xfer(tx[:3])
 	if err != nil {
 		return data, err
 	}
@@ -381,7 +371,7 @@ func (r *Device) readFifo() (Data, error) {
 	if length > 66 {
 		length = 66
 	}
-	rx, err = r.SpiDevice.Xfer(tx[:length+3])
+	rx, err = r.spiDevice.Xfer(tx[:length+3])
 	if err != nil {
 		return data, err
 	}
