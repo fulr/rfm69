@@ -24,7 +24,7 @@ const (
 	clientID      = "rfmGate"
 )
 
-var f = func(client *MQTT.Client, msg MQTT.Message) {
+var defautlPubHandler = func(client *MQTT.Client, msg MQTT.Message) {
 	fmt.Printf("TOPIC: %s\n", msg.Topic())
 	fmt.Printf("MSG: %s\n", msg.Payload())
 }
@@ -62,11 +62,11 @@ func actorHandler(tx chan *rfm69.Data) func(client *MQTT.Client, msg MQTT.Messag
 func main() {
 	log.Print("Start")
 	opts := MQTT.NewClientOptions().AddBroker(mqttBroker).SetClientID(clientID)
-	opts.SetDefaultPublishHandler(f)
+	opts.SetDefaultPublishHandler(defautlPubHandler)
 	opts.SetCleanSession(true)
 	c := MQTT.NewClient(opts)
 	token := c.Connect()
-	if !token.Wait() {
+	if token.Wait() && token.Error() != nil {
 		log.Fatal(token.Error())
 	}
 	rfm, err := rfm69.NewDevice(nodeID, networkID, isRfm69Hw)
@@ -83,9 +83,9 @@ func main() {
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, os.Interrupt, os.Kill)
 
-	subToken := c.Subscribe("/actor/#", 0, actorHandler(tx))
-	if !subToken.Wait() {
-		log.Fatal(subToken.Error())
+	token = c.Subscribe("/actor/#", 0, actorHandler(tx))
+	if token.Wait() && token.Error() != nil {
+		log.Fatal(token.Error())
 	}
 	defer c.Unsubscribe("/actor/#")
 
