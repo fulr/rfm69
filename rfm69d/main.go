@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -15,14 +16,15 @@ import (
 	"github.com/fulr/rfm69/payload"
 )
 
-const (
-	encryptionKey = "0123456789012345"
-	nodeID        = 1
-	networkID     = 73
-	isRfm69Hw     = true
-	mqttBroker    = "tcp://localhost:1883"
-	clientID      = "rfmGate"
-)
+// Configuration defines the config options and file structure
+type Configuration struct {
+	EncryptionKey string
+	NodeID        byte
+	NetworkID     byte
+	IsRfm69Hw     bool
+	MqttBroker    string
+	MqttClientID  string
+}
 
 var defautlPubHandler = func(client *MQTT.Client, msg MQTT.Message) {
 	fmt.Printf("TOPIC: %s\n", msg.Topic())
@@ -59,9 +61,26 @@ func actorHandler(tx chan *rfm69.Data) func(client *MQTT.Client, msg MQTT.Messag
 	}
 }
 
+func readConfig() (*Configuration, error) {
+	file, err := os.Open("conf.json")
+	if err != nil {
+		return nil, err
+	}
+	decoder := json.NewDecoder(file)
+	config := Configuration{}
+	err = decoder.Decode(&config)
+	file.Close()
+	return &config, err
+}
+
 func main() {
-	log.Print("Start")
-	opts := MQTT.NewClientOptions().AddBroker(mqttBroker).SetClientID(clientID)
+	log.Print("Reading config")
+	config, err := readConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Print(config)
+	opts := MQTT.NewClientOptions().AddBroker(config.MqttBroker).SetClientID(config.MqttClientID)
 	opts.SetDefaultPublishHandler(defautlPubHandler)
 	opts.SetCleanSession(true)
 	c := MQTT.NewClient(opts)
@@ -69,12 +88,12 @@ func main() {
 	if token.Wait() && token.Error() != nil {
 		log.Fatal(token.Error())
 	}
-	rfm, err := rfm69.NewDevice(nodeID, networkID, isRfm69Hw)
+	rfm, err := rfm69.NewDevice(config.NodeID, config.NetworkID, config.IsRfm69Hw)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rfm.Close()
-	err = rfm.Encrypt([]byte(encryptionKey))
+	err = rfm.Encrypt([]byte(config.EncryptionKey))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,7 +111,7 @@ func main() {
 	for {
 		select {
 		case data := <-rx:
-			if data.ToAddress != nodeID {
+			if data.ToAddress != config.NodeID {
 				break
 			}
 			log.Println("got data from", data.FromAddress, ", RSSI", data.Rssi)
