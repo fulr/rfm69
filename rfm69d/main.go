@@ -62,7 +62,7 @@ func actorHandler(tx chan *rfm69.Data) func(client *MQTT.Client, msg MQTT.Messag
 }
 
 func readConfig() (*Configuration, error) {
-	file, err := os.Open("conf.json")
+	file, err := os.Open("/etc/rfm69/conf.json")
 	if err != nil {
 		return nil, err
 	}
