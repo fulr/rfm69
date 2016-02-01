@@ -1,0 +1,5 @@
+parent: null
+package: github.com/fulr/rfm69
+import:
+- package: github.com/davecheney/gpio
+- package: github.com/fulr/spidev
