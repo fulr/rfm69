@@ -6,16 +6,12 @@ import (
 	"github.com/davecheney/gpio"
 )
 
-// Loop is the main receive and transmit handling loop
-func (r *Device) Loop() (rx chan *Data, tx chan *Data, quit chan bool) {
-	quit = make(chan bool)
-	rx = make(chan *Data, 5)
-	tx = make(chan *Data, 5)
-	go r.loopInternal(rx, tx, quit)
-	return
+// Send data
+func (r *Device) Send(d *Data) {
+	r.tx <- d
 }
 
-func (r *Device) loopInternal(rx chan *Data, tx chan *Data, quit chan bool) {
+func (r *Device) loop() {
 	irq := make(chan int)
 	r.gpio.BeginWatch(gpio.EdgeRising, func() {
 		irq <- 1
@@ -31,7 +27,7 @@ func (r *Device) loopInternal(rx chan *Data, tx chan *Data, quit chan bool) {
 
 	for {
 		select {
-		case dataToTransmit := <-tx:
+		case dataToTransmit := <-r.tx:
 			// TODO: can send?
 			r.readWriteReg(REG_PACKETCONFIG2, 0xFB, RF_PACKET2_RXRESTART) // avoid RX deadlocks
 			err = r.SetModeAndWait(RF_OPMODE_STANDBY)
@@ -81,13 +77,15 @@ func (r *Device) loopInternal(rx chan *Data, tx chan *Data, quit chan bool) {
 				log.Print(err)
 				return
 			}
-			rx <- &data
+			if r.OnReceive != nil {
+				go r.OnReceive(&data)
+			}
 			err = r.SetMode(RF_OPMODE_RECEIVER)
 			if err != nil {
 				log.Fatal(err)
 			}
-		case <-quit:
-			quit <- true
+		case <-r.quit:
+			r.quit <- true
 			return
 		}
 	}
