@@ -54,7 +54,7 @@ func NewDevice(nodeID, networkID byte, isRfm69HW bool) (*Device, error) {
 		address:    nodeID,
 		isRFM69HW:  isRfm69HW,
 		powerLevel: 31,
-		tx:         make(chan *Data),
+		tx:         make(chan *Data, 5),
 		quit:       make(chan bool),
 	}
 
