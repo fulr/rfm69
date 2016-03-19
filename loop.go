@@ -20,8 +20,7 @@ func (r *Device) loop() {
 
 	err := r.SetMode(RF_OPMODE_RECEIVER)
 	if err != nil {
-		log.Print(err)
-		return
+		log.Fatal(err)
 	}
 	defer r.SetMode(RF_OPMODE_STANDBY)
 
@@ -67,15 +66,14 @@ func (r *Device) loop() {
 			}
 			flags, err := r.readReg(REG_IRQFLAGS2)
 			if err != nil {
-				return
+				log.Fatal(err)
 			}
 			if flags&RF_IRQFLAGS2_PAYLOADREADY == 0 {
 				continue
 			}
 			data, err := r.readFifo()
 			if err != nil {
-				log.Print(err)
-				return
+				log.Fatal(err)
 			}
 			if r.OnReceive != nil {
 				go r.OnReceive(&data)
