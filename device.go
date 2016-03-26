@@ -2,7 +2,9 @@
 package rfm69
 
 import (
+	"errors"
 	"log"
+	"time"
 
 	"github.com/davecheney/gpio"
 	"github.com/fulr/spidev"
@@ -175,16 +177,24 @@ func (r *Device) setup() error {
 }
 
 func (r *Device) waitForMode() error {
-	for {
-		reg, err := r.readReg(REG_IRQFLAGS1)
-		if err != nil {
-			return err
+	errChan := make(chan error)
+	go func() {
+		for {
+			reg, err := r.readReg(REG_IRQFLAGS1)
+			if err != nil {
+				errChan <- err
+				break
+			}
+			if reg&RF_IRQFLAGS1_MODEREADY != 0 {
+				errChan <- nil
+				break
+			}
 		}
-		if reg&RF_IRQFLAGS1_MODEREADY != 0 {
-			break
-		}
-	}
-	return nil
+	}()
+	time.AfterFunc(5*time.Second, func() {
+		errChan <- errors.New("timeout")
+	})
+	return <-errChan
 }
 
 // Encrypt sets the encryption key and enables AES encryption
