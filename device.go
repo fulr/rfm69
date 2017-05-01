@@ -14,6 +14,12 @@ const (
 	spiPath = "/dev/spidev0.0"
 )
 
+var frequencies = map[string][]byte{
+	"433": {0x6C, 0x40, 0x00},
+	"868": {0xD9, 0x00, 0x00},
+	"915": {0xE4, 0xC0, 0x00},
+}
+
 // OnReceiveHandler is the receive callback
 type OnReceiveHandler func(*Data)
 
@@ -210,6 +216,17 @@ func (r *Device) Encrypt(key []byte) error {
 		}
 	}
 	return r.readWriteReg(REG_PACKETCONFIG2, 0xFE, turnOn)
+}
+
+func (r *Device) SetFrequency(freq string) error {
+	freq_bytes, found := frequencies[freq]
+	if !found {
+		return errors.New("frequency not found")
+	}
+	r.writeReg(REG_FRFMSB, freq_bytes[0])
+	r.writeReg(REG_FRFMID, freq_bytes[1])
+	r.writeReg(REG_FRFLSB, freq_bytes[2])
+	return nil
 }
 
 // SetMode sets operation mode
